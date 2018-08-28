@@ -36,10 +36,10 @@ for i in s.split("\n"):
 #		print(log)
 		if log.find("合并分支") != -1:
 			print(i + "合并操作")
-      continue
+			continue
 		if log.lower().find("merge branch") != -1:
 			print(i + "合并操作")
-      continue
+			continue
 		result = re.search('##\w\w*-\d\d*', log)
 #		print(result)
 		if result:
