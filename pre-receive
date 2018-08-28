@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*- 
+import fileinput
+import sys
+import os
+import io
+import re
+import subprocess
+import string
+import requests
+#保证中文输出正确
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+#print(sys.getdefaultencoding())
+# 读取用户试图更新的所有引用
+for line in fileinput.input():
+#	print ("pre-receive: Trying to push ref: %s" % line)
+	ref = line
+#print(ref)
+reflist = ref.split( )
+OLD_VALUE = reflist[0]
+NEW_VALUE = reflist[1]
+branch = reflist[2]
+#print(branch)
+cmd = "git rev-list " + OLD_VALUE + "..." + NEW_VALUE 
+cmdmsg = "git rev-list --pretty --max-count=1 "
+s = os.popen(cmd).read()
+#print("list  " + s)
+jiraurl = 'http://yourjira.com.cn/rest/api/2/issue/'
+for i in s.split("\n"):
+#	print(i)
+	cmdmsg1 = cmdmsg + i
+#	print(cmdmsg1)
+	if i != "":
+		log1 = subprocess.Popen(cmdmsg1, stdout=subprocess.PIPE, shell=True).stdout.read()
+		log = str(log1 , encoding='utf-8')
+#		print(log)
+		if log.find("合并分支") != -1:
+			print(i + "合并操作")
+      continue
+		if log.lower().find("merge branch") != -1:
+			print(i + "合并操作")
+      continue
+		result = re.search('##\w\w*-\d\d*', log)
+#		print(result)
+		if result:
+			issuekey = result.group().split("#")[2]
+			print(i + "匹配到问题单:" + issuekey)
+			get_url = jiraurl + issuekey + '/watchers'
+			r = requests.get(get_url, auth=('jiraid', 'password'))
+			issue_data =r.json()
+#			print("issue_data:" + str(issue_data))
+			if str(issue_data).find("\'errorMessages\': [\'问题不存在\']") != -1:
+				print("问题单\"" + issuekey + "\"不存在！请填写正确的问题单号！")
+				exit(1)
+		else:
+			print("提交：" + i + "中未发现Jira问题单，请修改提交日志后再次推送！\n 问题单格式：##EXAMPLE-123")
+			exit(1)
+exit(0)
+
